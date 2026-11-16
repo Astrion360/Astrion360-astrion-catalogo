@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+# Configure o domínio em build.py --site-url para gerar sitemap e canonical.
