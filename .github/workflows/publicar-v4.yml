@@ -1,0 +1,52 @@
+name: Publicar Astrion V4 no repositorio
+on:
+  push:
+    paths:
+      - 'deployment/site-v4.tar.xz.b64'
+      - '.github/workflows/publicar-v4.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publicar:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar o pacote da V4
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode deployment/site-v4.tar.xz.b64 > /tmp/astrion-v4.tar.xz
+          echo '48609bbd796004919ada712fc14532ca5fd0056da26ddaf6a3cc38d512917dc4  /tmp/astrion-v4.tar.xz' | sha256sum -c -
+          tar -tf /tmp/astrion-v4.tar.xz | while IFS= read -r entry; do
+            case "$entry" in
+              ./*) ;;
+              *) echo "Entrada inválida: $entry"; exit 1 ;;
+            esac
+            case "$entry" in
+              *'../'*|*'/..') echo "Caminho inseguro: $entry"; exit 1 ;;
+            esac
+          done
+      - name: Extrair os arquivos publicados
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -xJf /tmp/astrion-v4.tar.xz -C .
+          test -s index.html
+          test -s assets/styles.css
+          test -s assets/app.js
+          test -s assets/catalog-data.js
+      - name: Publicar todos os arquivos no ramo main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'Nenhuma mudança pendente.'
+            exit 0
+          fi
+          git commit -m 'Publicar site Astrion V4 completo'
+          git push origin HEAD:main
