@@ -1,4 +1,4 @@
-/** Astrion Marketplace V5 — busca, filtros, comparação e recomendações orientadas a objetivos.
+/** Astrion Marketplace Final — busca, filtros, comparação e recomendações orientadas a objetivos.
  * Interface inteiramente local. Não usa modelo de IA, API de pesquisa ou endpoint privado.
  */
 (function(){'use strict';
@@ -51,14 +51,19 @@ const INTENT={
  financeiro:['rentabil','margem','resultado','caixa','valuation','retorno','inadimpl','cobranc','recuperac','recebiv','leil','financeir','sinistro'],
  governanca:['regulat','bacen','banco central','compliance','pld','lgpd','governanc','risco','contrat','juridic','comite','pmo','autoriza']
 };
+function hasTerm(text,term){const n=norm(term);if(!n)return false;return (n.length<=3||n.includes(' '))?(' '+text+' ').includes(' '+n+' '):text.includes(n);}
 const SPECIFIC=[
+ [['precificacao','precificar','precos','pricing'],['precificacao-produtos']],
+ [['reduzir custos','reducao de custos','eficiencia'],['eficiencia-custos']],
+ [['aliancas estrategicas','gestao de parcerias'],['aliancas-estrategicas']],
+ [['produtividade comercial','performance comercial','metas dos corretores'],['performance-canais']],
  [['simulad','excel','planilha'],['T02','T03']], [['simulad','consorcio'],['T03','T02']],
  [['rfp','edital','concorrenc'],['V09','grande-conta-rfp']], [['mga','mgu'],['seguros-mga']],
  [['sinistro'],['sinistros-prestadores']], [['corretor','corretores','b2b2c'],['canais-b2b2c','lancamento-canal']],
  [['inadimpl','cobranc','recuperac'],['O04','R01','R09']], [['administradora','white label','wl','consorcio'],['wl-administradora','V06']],
  [['dashboard','painel'],['T01']], [['pmo'],['G07','B04']], [['treinament','treinar','playbook'],['lancamento-canal','C07']]
 ];
-const PRIORITY={estrategia:['bp-b2b','triagem-b2b','grande-conta-rfp'],canais:['canais-b2b2c','lancamento-canal','C01'],produtos:['produtos-receitas','seguros-mga','O01'],operacao:['implantacao-processos','wl-administradora','transformacao-ia'],bpo:['bpo-gerencial','bpo-comercial','bpo-tecnico'],financeiro:['viabilidade-retorno','performance-portfolio','O04'],governanca:['executivo-fracionado','G07','G03']};
+const PRIORITY={estrategia:['bp-b2b','triagem-b2b','grande-conta-rfp'],canais:['canais-b2b2c','performance-canais','aliancas-estrategicas','lancamento-canal','C01'],produtos:['produtos-receitas','precificacao-produtos','seguros-mga','O01'],operacao:['implantacao-processos','eficiencia-custos','wl-administradora','transformacao-ia'],bpo:['bpo-gerencial','bpo-comercial','bpo-tecnico'],financeiro:['viabilidade-retorno','performance-portfolio','O04'],governanca:['executivo-fracionado','G07','G03']};
 const SIGNALS={
  'triagem-b2b':['avaliar parceiro','triagem','pre viabilidade','primeira analise','qualificar'],
  'bp-b2b':['business plan','plano de negocios','viabilidade','parceria bancaria','parceria b2b','projecoes','modelo economico'],
@@ -76,14 +81,18 @@ const SIGNALS={
  'performance-portfolio':['portfolio','rentabilidade','mix','margem','carteira'],
  'seguros-mga':['mga','mgu','subscricao','seguradora'],
  'sinistros-prestadores':['sinistros','sinistro','regulacao de sinistros'],
+ 'performance-canais':['produtividade comercial','performance dos canais','conversao de corretores','metas comerciais','gestao de performance'],
+ 'precificacao-produtos':['precificacao','precificar','estrategia de precos','revisao de precos','politica de precos'],
+ 'eficiencia-custos':['reduzir custos','reducao de custos','eficiencia operacional','despesas operacionais','gestao de custos'],
+ 'aliancas-estrategicas':['aliancas','alianca estrategica','gestao de parcerias','negociar parceria','acordos comerciais'],
  'executivo-fracionado':['executivo fracionado','fractional','diretor interino','gestao interina']
 };
 function isNegated(text,word){const w=stem(norm(word)).slice(0,5),source=norm(text);return new RegExp('(?:nao|sem|dispenso|evitar)\\s+(?:quero\\s+|preciso\\s+)?(?:\\w+\\s+){0,2}'+w).test(source);}
 function score(x,text,goals,stage,choice){const item=x.data;const name=norm(item.name),prop=norm(describe(x)),words=tokens(text),textNorm=norm(text);let score=0;const matches=[];
  if(goals.includes(item.goal)){score+=22;matches.push('objetivo '+goalName(item.goal).toLowerCase());}else if(goals.length)score-=8;
- for(const [goal,aliases] of Object.entries(INTENT)){for(const term of aliases){if(textNorm.includes(norm(term))&&!isNegated(text,term)){if(item.goal===goal){score+=2.7;matches.push('necessidade relacionada a '+goalName(goal).toLowerCase());}break;}}}
+ for(const [goal,aliases] of Object.entries(INTENT)){for(const term of aliases){if(hasTerm(textNorm,term)&&!isNegated(text,term)){if(item.goal===goal){score+=2.7;matches.push('necessidade relacionada a '+goalName(goal).toLowerCase());}break;}}}
  for(const w of words){const st=stem(w);if(st.length<3)continue;if(tokens(name).some(t=>stem(t).startsWith(st.slice(0,Math.min(5,st.length)))))score+=4.8;if(tokens(prop).some(t=>stem(t).startsWith(st.slice(0,Math.min(5,st.length)))))score+=2;}
- for(const alias of SIGNALS[x.id]||[]){if(textNorm.includes(norm(alias))&&!isNegated(text,alias)){score+=12;matches.push(alias);}}
+ for(const alias of SIGNALS[x.id]||[]){if(hasTerm(textNorm,alias)&&!isNegated(text,alias)){score+=12;matches.push(alias);}}
  for(const [terms,ids] of SPECIFIC){if(terms.some(t=>textNorm.includes(norm(t)))&&!terms.some(t=>isNegated(text,t))&&ids.includes(x.id)){score+=24;matches.push('demanda específica');}}
  if(item.code && new RegExp('\\b'+item.code.toLowerCase()+'\\b').test(textNorm)){score+=80;matches.push('código solicitado');}
  if(textNorm.includes('excel')&&x.id==='T02')score+=24;

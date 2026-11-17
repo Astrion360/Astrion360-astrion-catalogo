@@ -1,7 +1,8 @@
 /* Carrinho de orçamento: seleção local, sem cadastro, sem servidor e sem checkout. */
 (function(root){
  'use strict';
- const STORAGE_KEY='astrion-orcamento-v1';
+ // A versão final não importa seleções de versões anteriores.
+ const STORAGE_KEY='astrion-orcamento-final-2026-11';
  function makeStore(catalog,storage){
    const byService=new Map((catalog.services||[]).map(s=>[s.code,s]));
    const bySolution=new Map((catalog.solutions||[]).map(s=>[s.id,s]));
